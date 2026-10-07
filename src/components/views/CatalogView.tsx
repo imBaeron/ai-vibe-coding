@@ -3,22 +3,19 @@ import { Commodity } from '../../types';
 import { COMMODITIES, CATEGORIES } from '../../data/mockData';
 import { PillButton } from '../common/PillButton';
 import { PillTag } from '../common/PillTag';
-import { PriceSparkline } from '../common/PriceSparkline';
 import { 
   Search, 
   Filter, 
   ArrowUpDown, 
   MapPin, 
   Clock, 
-  TrendingUp, 
-  TrendingDown, 
-  Minus, 
   LayoutGrid, 
   List, 
   ShoppingBag, 
   ArrowLeftRight, 
   SlidersHorizontal,
-  Store
+  Store,
+  ChevronDown
 } from 'lucide-react';
 
 interface CatalogViewProps {
@@ -94,7 +91,6 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
       if (sortBy === 'cheapest') return a.cheapestPrice - b.cheapestPrice;
       if (sortBy === 'expensive') return b.cheapestPrice - a.cheapestPrice;
       if (sortBy === 'name') return a.name.localeCompare(b.name);
-      if (sortBy === 'trend-drop') return a.trendPercentage - b.trendPercentage;
       return 0;
     });
   }, [searchQuery, selectedCategory, statusFilter, selectedLocation, sortBy, quickFilter]);
@@ -102,21 +98,21 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   return (
     <div className="space-y-6">
       
-      {/* Category Pills Scroller */}
-      <div className="bg-canvas-light p-4 rounded-xl border border-hairline-light shadow-level-3">
-        <div className="flex items-center justify-between mb-2">
+      {/* Category Pills Scroller with Generous Padding & Custom Scrollbar */}
+      <div className="bg-canvas-light p-4 sm:p-5 rounded-xl border border-hairline-light shadow-level-3">
+        <div className="flex items-center justify-between mb-3 px-1">
           <span className="text-xs uppercase tracking-widest text-shade-50 font-semibold">
             Browse by Category
           </span>
           <span className="text-xs text-shade-50 font-mono">
-            {CATEGORIES.length} Categories
+            {CATEGORIES.length} Categories Available
           </span>
         </div>
         
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <div className="flex items-center gap-2 overflow-x-auto pt-1 pb-3 px-1 custom-scroller">
           <button
             onClick={() => setSelectedCategory('all')}
-            className={`px-4 py-2 text-xs font-medium rounded-pill whitespace-nowrap transition-all ${
+            className={`px-4 py-2 text-xs font-medium rounded-pill whitespace-nowrap flex-shrink-0 transition-all ${
               selectedCategory === 'all'
                 ? 'bg-primary text-on-primary shadow-sm'
                 : 'bg-canvas-cream text-ink border border-hairline-light hover:bg-shade-30/50'
@@ -129,7 +125,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-4 py-2 text-xs font-medium rounded-pill whitespace-nowrap transition-all ${
+              className={`px-4 py-2 text-xs font-medium rounded-pill whitespace-nowrap flex-shrink-0 transition-all ${
                 selectedCategory === cat.id
                   ? 'bg-primary text-on-primary shadow-sm'
                   : 'bg-canvas-cream text-ink border border-hairline-light hover:bg-shade-30/50'
@@ -141,7 +137,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         </div>
       </div>
 
-      {/* Control Bar: Search input, quick filter pills, sorting, view toggle */}
+      {/* Control Bar: Custom Styled Inputs & Dropdowns */}
       <div className="bg-canvas-light p-4 sm:p-5 rounded-xl border border-hairline-light shadow-level-3 space-y-4">
         
         {/* Top Controls Row */}
@@ -155,7 +151,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               placeholder="Search commodity name, brand, stall, or keyword (e.g. Sinandomeng, Liempo, Galunggong)..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 text-sm bg-canvas-cream text-ink placeholder:text-shade-40 rounded-pill border border-hairline-light focus:outline-none focus:border-ink transition-colors"
+              className="w-full pl-10 pr-10 py-2.5 text-sm bg-canvas-cream text-ink placeholder:text-shade-40 rounded-pill border border-hairline-light focus:outline-none focus:border-ink transition-colors shadow-sm"
             />
             {searchQuery && (
               <button
@@ -167,42 +163,45 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             )}
           </div>
 
-          {/* Sort & View Switches */}
+          {/* Custom Styled Sort & Status Filter Dropdowns */}
           <div className="flex items-center gap-2 flex-wrap">
             
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-canvas-cream rounded-pill border border-hairline-light text-xs text-ink">
-              <ArrowUpDown className="w-3.5 h-3.5 text-shade-50" />
+            {/* Sort Dropdown */}
+            <div className="relative flex items-center">
+              <ArrowUpDown className="absolute left-3 w-3.5 h-3.5 text-shade-50 pointer-events-none" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="bg-transparent text-xs text-ink focus:outline-none cursor-pointer pr-1"
+                className="appearance-none bg-canvas-cream text-ink text-xs font-medium pl-8 pr-7 py-2 rounded-pill border border-hairline-light hover:border-shade-40 focus:outline-none focus:border-ink cursor-pointer transition-colors shadow-sm"
               >
                 <option value="cheapest">Lowest Price First</option>
                 <option value="expensive">Highest Price First</option>
                 <option value="name">Name (A-Z)</option>
-                <option value="trend-drop">Biggest Price Drops</option>
               </select>
+              <ChevronDown className="absolute right-2.5 w-3.5 h-3.5 text-shade-40 pointer-events-none" />
             </div>
 
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-canvas-cream rounded-pill border border-hairline-light text-xs text-ink">
-              <Filter className="w-3.5 h-3.5 text-shade-50" />
+            {/* Status Filter Dropdown */}
+            <div className="relative flex items-center">
+              <Filter className="absolute left-3 w-3.5 h-3.5 text-shade-50 pointer-events-none" />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-transparent text-xs text-ink focus:outline-none cursor-pointer pr-1"
+                className="appearance-none bg-canvas-cream text-ink text-xs font-medium pl-8 pr-7 py-2 rounded-pill border border-hairline-light hover:border-shade-40 focus:outline-none focus:border-ink cursor-pointer transition-colors shadow-sm"
               >
                 <option value="all">All Statuses</option>
                 <option value="available">Available in Stock</option>
                 <option value="low_stock">Low Stock</option>
               </select>
+              <ChevronDown className="absolute right-2.5 w-3.5 h-3.5 text-shade-40 pointer-events-none" />
             </div>
 
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-canvas-cream rounded-pill border border-hairline-light p-0.5">
+            <div className="flex items-center bg-canvas-cream rounded-pill border border-hairline-light p-0.5 shadow-sm">
               <button
                 onClick={() => setViewMode('grid')}
                 className={`p-1.5 rounded-pill transition-colors ${
-                  viewMode === 'grid' ? 'bg-primary text-on-primary' : 'text-shade-50 hover:text-ink'
+                  viewMode === 'grid' ? 'bg-primary text-on-primary shadow-sm' : 'text-shade-50 hover:text-ink'
                 }`}
                 title="Grid View"
               >
@@ -211,7 +210,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               <button
                 onClick={() => setViewMode('table')}
                 className={`p-1.5 rounded-pill transition-colors ${
-                  viewMode === 'table' ? 'bg-primary text-on-primary' : 'text-shade-50 hover:text-ink'
+                  viewMode === 'table' ? 'bg-primary text-on-primary shadow-sm' : 'text-shade-50 hover:text-ink'
                 }`}
                 title="Table View"
               >
@@ -228,16 +227,6 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             <SlidersHorizontal className="w-3.5 h-3.5" /> Quick Filters:
           </span>
           <button
-            onClick={() => setQuickFilter(quickFilter === 'price-drops' ? null : 'price-drops')}
-            className={`px-3 py-1 rounded-pill transition-colors ${
-              quickFilter === 'price-drops'
-                ? 'bg-aloe-10 text-ink font-semibold'
-                : 'bg-canvas-cream text-shade-60 hover:bg-shade-30/40 border border-hairline-light'
-            }`}
-          >
-            📉 Price Drops & Deals
-          </button>
-          <button
             onClick={() => setQuickFilter(quickFilter === 'staples' ? null : 'staples')}
             className={`px-3 py-1 rounded-pill transition-colors ${
               quickFilter === 'staples'
@@ -245,7 +234,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 : 'bg-canvas-cream text-shade-60 hover:bg-shade-30/40 border border-hairline-light'
             }`}
           >
-            🌾 Daily Household Staples
+            🌾 Daily Staples
           </button>
           <button
             onClick={() => setQuickFilter(quickFilter === 'under-50' ? null : 'under-50')}
@@ -274,7 +263,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
       </div>
 
-      {/* Grid View */}
+      {/* Grid View (Streamlined without trend noise) */}
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredCommodities.map((item) => (
@@ -292,17 +281,12 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                     alt={item.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1.5">
+                  <div className="absolute top-2.5 left-2.5 flex items-center">
                     <PillTag variant="shade" size="xs">
                       {item.subcategory}
                     </PillTag>
-                    {item.trend === 'falling' && (
-                      <PillTag variant="mint" size="xs">
-                        Price Drop
-                      </PillTag>
-                    )}
                   </div>
-                  <div className="absolute top-2.5 right-2.5">
+                  <div className="absolute top-2.5 right-2.5 flex items-center">
                     {item.status === 'available' ? (
                       <PillTag variant="status-available" size="xs">
                         Available
@@ -357,30 +341,15 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   </div>
                 </div>
 
-                {/* Trend sparkline & update timestamp */}
+                {/* Update timestamp */}
                 <div className="flex items-center justify-between pt-2.5 border-t border-hairline-light text-xs text-shade-50">
                   <div className="flex items-center gap-1">
                     <Clock className="w-3 h-3 text-shade-40" />
-                    <span>{item.lastUpdated}</span>
+                    <span>Updated {item.lastUpdated}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    {item.trend === 'rising' && (
-                      <span className="text-rose-600 font-mono text-[11px] flex items-center">
-                        <TrendingUp className="w-3 h-3 mr-0.5" /> +{item.trendPercentage}%
-                      </span>
-                    )}
-                    {item.trend === 'falling' && (
-                      <span className="text-emerald-700 font-mono text-[11px] flex items-center">
-                        <TrendingDown className="w-3 h-3 mr-0.5" /> {item.trendPercentage}%
-                      </span>
-                    )}
-                    {item.trend === 'stable' && (
-                      <span className="text-shade-50 font-mono text-[11px] flex items-center">
-                        <Minus className="w-3 h-3 mr-0.5" /> Stable
-                      </span>
-                    )}
-                    <PriceSparkline data={item.priceHistory} width={60} height={20} />
-                  </div>
+                  <span className="text-[11px] text-shade-50 font-mono">
+                    {item.storePrices.length} Sellers
+                  </span>
                 </div>
 
               </div>
@@ -425,7 +394,6 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   <th className="py-3.5 px-4">Lowest Price</th>
                   <th className="py-3.5 px-4">Cheapest Seller / Market</th>
                   <th className="py-3.5 px-4">Avg Price</th>
-                  <th className="py-3.5 px-4">30-Day Trend</th>
                   <th className="py-3.5 px-4">Updated</th>
                   <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
@@ -473,25 +441,6 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
                     <td className="py-3 px-4 font-mono text-shade-60">
                       ₱{item.currentAveragePrice.toFixed(2)}
-                    </td>
-
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        {item.trend === 'rising' && (
-                          <span className="text-rose-600 font-mono text-xs flex items-center">
-                            <TrendingUp className="w-3 h-3 mr-0.5" /> +{item.trendPercentage}%
-                          </span>
-                        )}
-                        {item.trend === 'falling' && (
-                          <span className="text-emerald-700 font-mono text-xs flex items-center">
-                            <TrendingDown className="w-3 h-3 mr-0.5" /> {item.trendPercentage}%
-                          </span>
-                        )}
-                        {item.trend === 'stable' && (
-                          <span className="text-shade-50 font-mono text-xs">Stable</span>
-                        )}
-                        <PriceSparkline data={item.priceHistory} width={50} height={18} />
-                      </div>
                     </td>
 
                     <td className="py-3 px-4 text-xs text-shade-50 whitespace-nowrap">

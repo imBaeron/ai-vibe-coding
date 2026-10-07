@@ -53,7 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-link-cool-1 hidden md:block leading-none">
-                Citizen Commodity Price Monitor
+                Smart Utility &amp; Kalakal Information
               </p>
             </div>
           </div>
@@ -83,16 +83,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
             
-            {/* Location Selector */}
+            {/* Custom Styled Location Selector */}
             <div className="relative hidden sm:flex items-center">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-on-primary bg-canvas-night-elevated rounded-pill border border-hairline-dark">
-                <MapPin className="w-3.5 h-3.5 text-aloe-10" />
+              <div className="relative flex items-center">
+                <MapPin className="absolute left-3 w-3.5 h-3.5 text-aloe-10 pointer-events-none" />
                 <select
                   value={selectedLocation}
                   onChange={(e) => onLocationChange(e.target.value)}
-                  className="bg-transparent text-xs text-on-primary focus:outline-none cursor-pointer pr-1"
+                  className="appearance-none bg-canvas-night-elevated text-on-primary text-xs pl-8 pr-7 py-2 rounded-pill border border-hairline-dark hover:border-aloe-10/50 focus:outline-none focus:border-aloe-10 cursor-pointer transition-colors shadow-sm"
                 >
-                  <option value="All Locations" className="bg-canvas-night text-on-primary">All Calbayog & Samar</option>
+                  <option value="All Locations" className="bg-canvas-night text-on-primary">All Calbayog &amp; Samar</option>
                   <option value="Calbayog Central" className="bg-canvas-night text-on-primary">Calbayog Central</option>
                   <option value="Brgy. Rawis" className="bg-canvas-night text-on-primary">Brgy. Rawis</option>
                   <option value="Brgy. San Policarpo" className="bg-canvas-night text-on-primary">Brgy. San Policarpo</option>
@@ -100,7 +100,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <option value="Brgy. Hamorawon" className="bg-canvas-night text-on-primary">Brgy. Hamorawon</option>
                   <option value="Brgy. Matobato" className="bg-canvas-night text-on-primary">Brgy. Matobato</option>
                 </select>
-                <ChevronDown className="w-3 h-3 text-link-cool-2" />
+                <ChevronDown className="absolute right-2.5 w-3.5 h-3.5 text-link-cool-2 pointer-events-none" />
               </div>
             </div>
 
@@ -181,7 +181,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <MapPin className="w-3.5 h-3.5" />
-            <span>Markets & Stores</span>
+            <span>Markets &amp; Stores</span>
           </button>
 
           <button
@@ -193,7 +193,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5" />
-            <span>Price History & Trends</span>
+            <span>Price History &amp; Trends</span>
           </button>
 
           <button

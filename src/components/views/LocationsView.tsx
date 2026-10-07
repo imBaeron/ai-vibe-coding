@@ -152,7 +152,7 @@ export const LocationsView: React.FC<LocationsViewProps> = ({
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-1.5 mb-1">
-                      <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-pill font-semibold ${
+                      <span className={`text-[10px] uppercase tracking-wider px-2.5 py-0.5 rounded-pill font-semibold ${
                         isSelected ? 'bg-canvas-night-elevated text-aloe-10' : 'bg-shade-30 text-ink'
                       }`}>
                         {m.type}
@@ -266,7 +266,7 @@ export const LocationsView: React.FC<LocationsViewProps> = ({
                   Current Commodity Prices at {activeMarket.name}
                 </h4>
                 <p className="text-xs text-shade-50">
-                  Showing recorded rates for items available at this seller
+                  Recorded price rates for items at this seller
                 </p>
               </div>
               <span className="text-xs font-mono text-shade-50">
@@ -274,6 +274,7 @@ export const LocationsView: React.FC<LocationsViewProps> = ({
               </span>
             </div>
 
+            {/* Table-style Uniform Rows */}
             <div className="divide-y divide-hairline-light">
               {marketCommodities.map(({ commodity, storePrice }) => {
                 const isLowestOverall = storePrice.price === commodity.cheapestPrice;
@@ -282,21 +283,24 @@ export const LocationsView: React.FC<LocationsViewProps> = ({
                   <div
                     key={commodity.id}
                     onClick={() => onSelectCommodity(commodity)}
-                    className="py-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-canvas-cream/50 px-2 rounded-lg cursor-pointer transition-colors"
+                    className="py-3.5 px-3 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-canvas-cream/60 rounded-lg cursor-pointer transition-colors"
                   >
-                    <div className="flex items-center gap-3">
+                    {/* Item Image and Title with fixed-size badge */}
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <img
                         src={commodity.image}
                         alt={commodity.name}
                         className="w-12 h-12 rounded-lg object-cover border border-hairline-light flex-shrink-0"
                       />
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-sm text-ink">{commodity.name}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-sm text-ink truncate">
+                            {commodity.name}
+                          </span>
                           {isLowestOverall && (
-                            <PillTag variant="mint" size="xs">
+                            <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] rounded-pill bg-aloe-10 text-emerald-950 font-semibold flex-shrink-0 whitespace-nowrap">
                               Cheapest in Calbayog
-                            </PillTag>
+                            </span>
                           )}
                         </div>
                         <div className="text-xs text-shade-50 mt-0.5">
@@ -305,9 +309,12 @@ export const LocationsView: React.FC<LocationsViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between w-full sm:w-auto sm:gap-4">
-                      <div className="text-right">
-                        <div className="text-xl font-medium text-ink font-mono">
+                    {/* Price and Buttons Container with Fixed Standard Widths */}
+                    <div className="flex items-center justify-between md:justify-end gap-4 flex-shrink-0">
+                      
+                      {/* Price Column (Fixed Width min-w-[110px]) */}
+                      <div className="text-left md:text-right w-28 flex-shrink-0">
+                        <div className="text-lg font-medium text-ink font-mono">
                           ₱{storePrice.price.toFixed(2)}
                           <span className="text-xs text-shade-50 font-normal"> / {storePrice.unit}</span>
                         </div>
@@ -316,12 +323,13 @@ export const LocationsView: React.FC<LocationsViewProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      {/* Action Buttons Column (Fixed Uniform Sizes) */}
+                      <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                         <PillButton
                           variant="outline-light"
                           size="sm"
                           onClick={() => onCompareCommodity(commodity)}
-                          className="text-xs py-1 px-2.5"
+                          className="text-xs py-1.5 px-3 w-20 justify-center"
                         >
                           Compare
                         </PillButton>
@@ -329,11 +337,12 @@ export const LocationsView: React.FC<LocationsViewProps> = ({
                           variant="aloe"
                           size="sm"
                           onClick={() => onAddToBasket(commodity)}
-                          className="text-xs py-1 px-2.5"
+                          className="text-xs py-1.5 px-3 w-24 justify-center"
                         >
                           + Basket
                         </PillButton>
                       </div>
+
                     </div>
                   </div>
                 );

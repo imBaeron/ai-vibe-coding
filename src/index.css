@@ -37,8 +37,8 @@
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -49,4 +49,48 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #a1a1aa;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.custom-scroller::-webkit-scrollbar {
+  height: 5px;
+}
+.custom-scroller::-webkit-scrollbar-track {
+  background: #f0f0eb;
+  border-radius: 9999px;
+  margin: 0 4px;
+}
+.custom-scroller::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 9999px;
+}
+.custom-scroller::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+/* Infinite Marquee Animation for Live Ticker */
+@keyframes tickerLoop {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-ticker {
+  display: flex;
+  width: max-content;
+  animation: tickerLoop 35s linear infinite;
+}
+
+.animate-ticker:hover {
+  animation-play-state: paused;
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Commodity } from '../../types';
 import { CATEGORIES, COMMODITIES } from '../../data/mockData';
 import { PillButton } from '../common/PillButton';
@@ -33,6 +33,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
   onAddToBasket,
 }) => {
   const [selectedCatId, setSelectedCatId] = useState<string>(CATEGORIES[0].id);
+  const detailSectionRef = useRef<HTMLDivElement>(null);
 
   const activeCategory =
     CATEGORIES.find((c) => c.id === selectedCatId) || CATEGORIES[0];
@@ -40,6 +41,13 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
   const categoryCommodities = COMMODITIES.filter(
     (c) => c.category === selectedCatId
   );
+
+  const handleCategoryClick = (catId: string) => {
+    setSelectedCatId(catId);
+    setTimeout(() => {
+      detailSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  };
 
   const getCategoryIcon = (iconName: string) => {
     switch (iconName) {
@@ -73,7 +81,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
           Category-Based Commodity Browsing
         </h2>
         <p className="text-sm sm:text-base text-shade-60 mt-1 max-w-2xl font-light">
-          Browse food staples, fresh meats, seafood, eggs, vegetables, and household essentials by group.
+          Click any commodity category below to view and compare updated market prices.
         </p>
       </div>
 
@@ -86,10 +94,10 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
           return (
             <div
               key={cat.id}
-              onClick={() => setSelectedCatId(cat.id)}
+              onClick={() => handleCategoryClick(cat.id)}
               className={`rounded-xl border p-4 sm:p-5 cursor-pointer transition-all flex flex-col justify-between ${
                 isSelected
-                  ? 'bg-primary text-on-primary border-primary shadow-level-3 scale-[1.02]'
+                  ? 'bg-primary text-on-primary border-primary shadow-level-3 scale-[1.02] ring-2 ring-aloe-10/40'
                   : 'bg-canvas-light text-ink border-hairline-light hover:border-shade-40 shadow-level-3'
               }`}
             >
@@ -128,8 +136,11 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
         })}
       </div>
 
-      {/* Active Category Detail Section */}
-      <div className="bg-canvas-light rounded-xl border border-hairline-light shadow-level-3 p-6 sm:p-8 space-y-6">
+      {/* Active Category Detail Section (Smooth Scroll Target) */}
+      <div 
+        ref={detailSectionRef}
+        className="bg-canvas-light rounded-xl border border-hairline-light shadow-level-3 p-6 sm:p-8 space-y-6 scroll-mt-24"
+      >
         
         {/* Category Header Banner */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-hairline-light">
@@ -139,7 +150,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                 {getCategoryIcon(activeCategory.icon)}
               </span>
               <span className="text-xs uppercase tracking-wider text-shade-50 font-semibold">
-                Selected Category
+                Viewing Category
               </span>
             </div>
             <h3 className="text-2xl sm:text-3xl font-light text-ink font-display-thin">
