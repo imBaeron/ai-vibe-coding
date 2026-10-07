@@ -12,6 +12,7 @@ import { TrendsView } from './components/views/TrendsView';
 import { BasketCalculatorView } from './components/views/BasketCalculatorView';
 import { CommodityDetailModal } from './components/modals/CommodityDetailModal';
 import { ReportPriceModal } from './components/modals/ReportPriceModal';
+import { DatabaseManagerModal } from './components/modals/DatabaseManagerModal';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavigationTab>('catalog');
@@ -21,6 +22,8 @@ export const App: React.FC = () => {
   // Modals & Item Selection
   const [modalCommodity, setModalCommodity] = useState<Commodity | null>(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
+  const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState<boolean>(false);
+  const [isUsingLiveData, setIsUsingLiveData] = useState<boolean>(false);
   const [compareCommodityTarget, setCompareCommodityTarget] = useState<Commodity | null>(null);
   const [trendCommodityTarget, setTrendCommodityTarget] = useState<Commodity | null>(null);
 
@@ -112,6 +115,8 @@ export const App: React.FC = () => {
         activeTab={activeTab}
         onTabChange={handleTabChange}
         onOpenReportModal={() => setIsReportModalOpen(true)}
+        onOpenDatabaseModal={() => setIsDatabaseModalOpen(true)}
+        isUsingLiveData={isUsingLiveData}
         selectedLocation={selectedLocation}
         onLocationChange={setSelectedLocation}
         searchQuery={searchQuery}
@@ -129,6 +134,7 @@ export const App: React.FC = () => {
         <HeroBanner
           onNavigate={handleTabChange}
           onOpenReportModal={() => setIsReportModalOpen(true)}
+          onOpenDatabaseModal={() => setIsDatabaseModalOpen(true)}
         />
       )}
 
@@ -203,6 +209,23 @@ export const App: React.FC = () => {
       <ReportPriceModal
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
+        onReportSubmitted={() => {
+          showToast('Price report submitted to Supabase successfully!');
+        }}
+      />
+
+      {/* Database & Supabase Manager Modal */}
+      <DatabaseManagerModal
+        isOpen={isDatabaseModalOpen}
+        onClose={() => setIsDatabaseModalOpen(false)}
+        isUsingLiveData={isUsingLiveData}
+        onToggleDataSource={(live) => {
+          setIsUsingLiveData(live);
+          showToast(live ? 'Switched to Live Supabase API' : 'Switched to Local Mock Data');
+        }}
+        onRefreshLiveData={() => {
+          showToast('Data refreshed successfully');
+        }}
       />
 
       {/* Footer */}
