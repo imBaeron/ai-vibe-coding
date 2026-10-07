@@ -42,12 +42,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           
           {/* Brand Logo */}
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => onTabChange('catalog')}>
-            <div className="w-9 h-9 rounded-pill bg-aloe-10 text-ink flex items-center justify-center font-bold text-lg tracking-tight shadow-sm">
-              S
-            </div>
+            <img
+              src="/pics/suki_logo.png"
+              alt="Suki Logo"
+              className="w-9 h-9 rounded-pill object-cover shadow-sm"
+            />
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-lg tracking-wider text-on-primary">SUKI</span>
                 <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] uppercase tracking-widest bg-shade-70 text-on-primary rounded-pill border border-white/10">
                   Kalakal Info
                 </span>
