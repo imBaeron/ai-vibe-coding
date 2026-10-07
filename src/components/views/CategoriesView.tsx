@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Commodity } from '../../types';
-import { CATEGORIES, COMMODITIES } from '../../data/mockData';
+import { Commodity, Category } from '../../types';
+import { CATEGORIES } from '../../data/mockData';
 import { PillButton } from '../common/PillButton';
 import { PillTag } from '../common/PillTag';
 import { 
@@ -22,12 +22,14 @@ import {
 } from 'lucide-react';
 
 interface CategoriesViewProps {
+  commodities: Commodity[];
   onSelectCommodity: (c: Commodity) => void;
   onCompareCommodity: (c: Commodity) => void;
   onAddToBasket: (c: Commodity) => void;
 }
 
 export const CategoriesView: React.FC<CategoriesViewProps> = ({
+  commodities,
   onSelectCommodity,
   onCompareCommodity,
   onAddToBasket,
@@ -38,7 +40,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
   const activeCategory =
     CATEGORIES.find((c) => c.id === selectedCatId) || CATEGORIES[0];
 
-  const categoryCommodities = COMMODITIES.filter(
+  const categoryCommodities = commodities.filter(
     (c) => c.category === selectedCatId
   );
 
@@ -89,7 +91,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4">
         {CATEGORIES.map((cat) => {
           const isSelected = cat.id === selectedCatId;
-          const matchingItemsCount = COMMODITIES.filter((c) => c.category === cat.id).length;
+          const matchingItemsCount = commodities.filter((c) => c.category === cat.id).length;
 
           return (
             <div

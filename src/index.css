@@ -61,6 +61,7 @@
 
 .custom-scroller::-webkit-scrollbar {
   height: 5px;
+  width: 5px;
 }
 .custom-scroller::-webkit-scrollbar-track {
   background: #f0f0eb;

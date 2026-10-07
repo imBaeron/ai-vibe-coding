@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Commodity, NavigationTab, BasketItem } from './types';
-import { COMMODITIES } from './data/mockData';
+import { SukiApi } from './services/supabase';
 import { Navbar } from './components/layout/Navbar';
 import { HeroBanner } from './components/layout/HeroBanner';
 import { Footer } from './components/layout/Footer';
@@ -12,31 +12,31 @@ import { TrendsView } from './components/views/TrendsView';
 import { BasketCalculatorView } from './components/views/BasketCalculatorView';
 import { CommodityDetailModal } from './components/modals/CommodityDetailModal';
 import { ReportPriceModal } from './components/modals/ReportPriceModal';
-import { DatabaseManagerModal } from './components/modals/DatabaseManagerModal';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavigationTab>('catalog');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedLocation, setSelectedLocation] = useState<string>('All Locations');
   
-  // Modals & Item Selection
+  // Modals & Data
+  const [commodities, setCommodities] = useState<Commodity[]>([]);
   const [modalCommodity, setModalCommodity] = useState<Commodity | null>(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
-  const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState<boolean>(false);
-  const [isUsingLiveData, setIsUsingLiveData] = useState<boolean>(false);
   const [compareCommodityTarget, setCompareCommodityTarget] = useState<Commodity | null>(null);
   const [trendCommodityTarget, setTrendCommodityTarget] = useState<Commodity | null>(null);
 
-  // Shopping Basket state with starter items
-  const [basket, setBasket] = useState<BasketItem[]>([
-    { commodity: COMMODITIES[0], quantity: 5 },
-    { commodity: COMMODITIES[2], quantity: 1 },
-    { commodity: COMMODITIES[4], quantity: 10 },
-    { commodity: COMMODITIES[8], quantity: 1 },
-    { commodity: COMMODITIES[9], quantity: 3 },
-  ]);
+  // Shopping Basket
+  const [basket, setBasket] = useState<BasketItem[]>([]);
 
   const [notification, setNotification] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const data = await SukiApi.getCommodities();
+      setCommodities(data);
+    };
+    fetchData();
+  }, []);
 
   const showToast = (message: string) => {
     setNotification(message);
@@ -79,7 +79,7 @@ export const App: React.FC = () => {
 
   const handleUpdateQuantity = (commodityId: string, quantity: number) => {
     if (quantity <= 0) {
-      handleRemoveItem(commodityId);
+      setBasket((prev) => prev.filter((item) => item.commodity.id !== commodityId));
       return;
     }
     setBasket((prev) =>
@@ -115,8 +115,6 @@ export const App: React.FC = () => {
         activeTab={activeTab}
         onTabChange={handleTabChange}
         onOpenReportModal={() => setIsReportModalOpen(true)}
-        onOpenDatabaseModal={() => setIsDatabaseModalOpen(true)}
-        isUsingLiveData={isUsingLiveData}
         selectedLocation={selectedLocation}
         onLocationChange={setSelectedLocation}
         searchQuery={searchQuery}
@@ -129,12 +127,11 @@ export const App: React.FC = () => {
         basketCount={basket.length}
       />
 
-      {/* Hero Banner (Shown when on catalog / home tab) */}
+      {/* Hero Banner */}
       {activeTab === 'catalog' && !searchQuery && (
         <HeroBanner
           onNavigate={handleTabChange}
           onOpenReportModal={() => setIsReportModalOpen(true)}
-          onOpenDatabaseModal={() => setIsDatabaseModalOpen(true)}
         />
       )}
 
@@ -143,6 +140,7 @@ export const App: React.FC = () => {
         
         {activeTab === 'catalog' && (
           <CatalogView
+            commodities={commodities}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             selectedLocation={selectedLocation}
@@ -151,9 +149,10 @@ export const App: React.FC = () => {
             onAddToBasket={handleAddToBasket}
           />
         )}
-
+        
         {activeTab === 'compare' && (
           <CompareView
+            commodities={commodities}
             initialCommodity={compareCommodityTarget}
             onSelectCommodityForModal={(c) => setModalCommodity(c)}
             onAddToBasket={handleAddToBasket}
@@ -162,6 +161,7 @@ export const App: React.FC = () => {
 
         {activeTab === 'categories' && (
           <CategoriesView
+            commodities={commodities}
             onSelectCommodity={(c) => setModalCommodity(c)}
             onCompareCommodity={handleCompareCommodity}
             onAddToBasket={handleAddToBasket}
@@ -170,6 +170,7 @@ export const App: React.FC = () => {
 
         {activeTab === 'locations' && (
           <LocationsView
+            commodities={commodities}
             onSelectCommodity={(c) => setModalCommodity(c)}
             onCompareCommodity={handleCompareCommodity}
             onAddToBasket={handleAddToBasket}
@@ -178,6 +179,7 @@ export const App: React.FC = () => {
 
         {activeTab === 'trends' && (
           <TrendsView
+            commodities={commodities}
             initialCommodity={trendCommodityTarget}
             onSelectCommodityForModal={(c) => setModalCommodity(c)}
             onCompareCommodity={handleCompareCommodity}
@@ -196,7 +198,7 @@ export const App: React.FC = () => {
 
       </main>
 
-      {/* Detail Modal */}
+      {/* Commodity Detail Modal */}
       <CommodityDetailModal
         commodity={modalCommodity}
         onClose={() => setModalCommodity(null)}
@@ -211,20 +213,6 @@ export const App: React.FC = () => {
         onClose={() => setIsReportModalOpen(false)}
         onReportSubmitted={() => {
           showToast('Price report submitted to Supabase successfully!');
-        }}
-      />
-
-      {/* Database & Supabase Manager Modal */}
-      <DatabaseManagerModal
-        isOpen={isDatabaseModalOpen}
-        onClose={() => setIsDatabaseModalOpen(false)}
-        isUsingLiveData={isUsingLiveData}
-        onToggleDataSource={(live) => {
-          setIsUsingLiveData(live);
-          showToast(live ? 'Switched to Live Supabase API' : 'Switched to Local Mock Data');
-        }}
-        onRefreshLiveData={() => {
-          showToast('Data refreshed successfully');
         }}
       />
 

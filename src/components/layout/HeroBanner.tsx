@@ -5,7 +5,6 @@ import {
   TrendingUp,
   CheckCircle2,
   Store,
-  Database,
   Sparkles,
   Flame,
 } from 'lucide-react';
@@ -14,13 +13,11 @@ import { NavigationTab } from '../../types';
 interface HeroBannerProps {
   onNavigate: (tab: NavigationTab) => void;
   onOpenReportModal: () => void;
-  onOpenDatabaseModal: () => void;
 }
 
 export const HeroBanner: React.FC<HeroBannerProps> = ({
   onNavigate,
   onOpenReportModal,
-  onOpenDatabaseModal,
 }) => {
   return (
     <section className="bg-canvas-night text-on-primary border-b border-hairline-dark relative overflow-hidden">
@@ -93,16 +90,6 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 className="hidden sm:inline-flex"
               >
                 Submit Price
-              </PillButton>
-
-              <PillButton
-                variant="outline-dark"
-                size="md"
-                onClick={onOpenDatabaseModal}
-                icon={<Database className="w-4 h-4 text-aloe-10" />}
-                className="bg-canvas-night-elevated border-white/20"
-              >
-                Database &amp; Supabase Hub
               </PillButton>
 
             </div>
