@@ -1,297 +1,302 @@
 -- ============================================================================
--- Commodity Price Monitoring System - Relational Database Schema
--- Compatible with PostgreSQL (and easily adaptable to MySQL / SQLite)
+-- SUKI — Smart Utility & Kalakal Information | Commodity Price Monitoring
+-- Production Supabase / PostgreSQL Relational Database Schema
+-- Correlated 1:1 with the Website Data Models (src/types/index.ts & mockData.ts)
 -- ============================================================================
 
--- Drop tables if re-running (in reverse order of dependencies)
+-- Clean up existing objects if recreating
+DROP VIEW IF EXISTS view_commodities_catalog CASCADE;
+DROP VIEW IF EXISTS view_market_summary CASCADE;
+DROP TABLE IF EXISTS citizen_price_reports CASCADE;
 DROP TABLE IF EXISTS price_history CASCADE;
-DROP TABLE IF EXISTS store_commodities CASCADE;
-DROP TABLE IF EXISTS stores CASCADE;
+DROP TABLE IF EXISTS store_prices CASCADE;
 DROP TABLE IF EXISTS commodities CASCADE;
+DROP TABLE IF EXISTS market_locations CASCADE;
 DROP TABLE IF EXISTS categories CASCADE;
-DROP TABLE IF EXISTS units_of_measurement CASCADE;
-DROP TABLE IF EXISTS locations CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
-
--- Drop custom enum types if exist
-DROP TYPE IF EXISTS user_role CASCADE;
-DROP TYPE IF EXISTS stock_status CASCADE;
 
 -- ----------------------------------------------------------------------------
--- Custom Enumerations
--- ----------------------------------------------------------------------------
-CREATE TYPE user_role AS ENUM (
-    'citizen',
-    'store_representative',
-    'market_inspector',
-    'admin'
-);
-
-CREATE TYPE stock_status AS ENUM (
-    'Available',
-    'Out of Stock',
-    'Limited'
-);
-
--- ----------------------------------------------------------------------------
--- 1. USERS TABLE
--- Tracks citizen reporters, market inspectors, store owners, and administrators.
--- ----------------------------------------------------------------------------
-CREATE TABLE users (
-    user_id SERIAL PRIMARY KEY,
-    full_name VARCHAR(120) NOT NULL,
-    email VARCHAR(150) UNIQUE NOT NULL,
-    phone_number VARCHAR(30),
-    role user_role NOT NULL DEFAULT 'citizen',
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- ----------------------------------------------------------------------------
--- 2. LOCATIONS TABLE
--- Normalizes administrative jurisdictions (Region, Province, City/Municipality, Barangay).
--- Directly powers Feature 5: Location-Based Price Information.
--- ----------------------------------------------------------------------------
-CREATE TABLE locations (
-    location_id SERIAL PRIMARY KEY,
-    region VARCHAR(100) NOT NULL,
-    province VARCHAR(100) NOT NULL,
-    municipality_city VARCHAR(100) NOT NULL,
-    barangay VARCHAR(100) NOT NULL,
-    zip_code VARCHAR(10),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_location_entry UNIQUE (province, municipality_city, barangay)
-);
-
--- ----------------------------------------------------------------------------
--- 3. CATEGORIES TABLE
--- Organizes commodities into intuitive classifications.
--- Directly powers Feature 4: Category-Based Browsing & Feature 2: Search by Category.
+-- 1. CATEGORIES TABLE
+-- Correlates with: Category (src/types/index.ts)
+-- Powers: CategoriesView & Category filters in CatalogView
 -- ----------------------------------------------------------------------------
 CREATE TABLE categories (
-    category_id SERIAL PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY, -- e.g. 'rice-grains', 'meat-poultry', 'fish-seafood'
     name VARCHAR(100) NOT NULL UNIQUE,
-    slug VARCHAR(120) NOT NULL UNIQUE,
-    description TEXT,
-    icon_name VARCHAR(50),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    tagline VARCHAR(255) NOT NULL,
+    icon VARCHAR(50) NOT NULL, -- Lucide icon key: 'Wheat', 'Drumstick', 'Fish', etc.
+    average_price_range VARCHAR(50),
+    image_url TEXT NOT NULL,
+    popular_items TEXT[] DEFAULT '{}',
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ----------------------------------------------------------------------------
--- 4. UNITS OF MEASUREMENT TABLE
--- Standardizes metric and counting units (kg, liter, piece, dozen, etc.).
--- Powers Feature 1: Unit display & cross-store comparison consistency.
+-- 2. MARKET_LOCATIONS TABLE
+-- Correlates with: MarketLocation (src/types/index.ts)
+-- Powers: LocationsView, Market Filter, Store Address & Distance display
 -- ----------------------------------------------------------------------------
-CREATE TABLE units_of_measurement (
-    unit_id SERIAL PRIMARY KEY,
-    unit_name VARCHAR(50) NOT NULL UNIQUE, -- e.g. Kilogram, Liter, Piece, Dozen
-    unit_symbol VARCHAR(20) NOT NULL UNIQUE -- e.g. kg, L, pc, dz
-);
-
--- ----------------------------------------------------------------------------
--- 5. COMMODITIES TABLE
--- Master catalogue of goods monitored across stores (e.g. Regular Rice, Pork Liempo, Brown Sugar).
--- Powers Feature 1: Commodity Viewing, Feature 2: Search, & Feature 3: Comparison.
--- ----------------------------------------------------------------------------
-CREATE TABLE commodities (
-    commodity_id SERIAL PRIMARY KEY,
-    category_id INT NOT NULL,
-    default_unit_id INT NOT NULL,
+CREATE TABLE market_locations (
+    id VARCHAR(50) PRIMARY KEY, -- e.g. 'mkt-calbayog-central', 'mkt-rawis-talipapa'
     name VARCHAR(150) NOT NULL,
-    slug VARCHAR(180) NOT NULL UNIQUE,
-    description TEXT,
-    search_keywords TEXT, -- Space/comma separated keywords for quick searching
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-
-    -- Foreign Key Constraints
-    CONSTRAINT fk_commodities_category 
-        FOREIGN KEY (category_id) 
-        REFERENCES categories(category_id) 
-        ON DELETE RESTRICT,
-
-    CONSTRAINT fk_commodities_default_unit 
-        FOREIGN KEY (default_unit_id) 
-        REFERENCES units_of_measurement(unit_id) 
-        ON DELETE RESTRICT
-);
-
--- ----------------------------------------------------------------------------
--- 6. STORES TABLE
--- Stores, public markets, groceries, and supermarkets that sell commodities.
--- Powers Feature 1: Store/Market name display & Feature 5: Location filtering.
--- ----------------------------------------------------------------------------
-CREATE TABLE stores (
-    store_id SERIAL PRIMARY KEY,
-    location_id INT NOT NULL,
-    name VARCHAR(150) NOT NULL,
-    store_type VARCHAR(50) NOT NULL DEFAULT 'Public Market', -- e.g. Public Market, Supermarket, Grocery, Sari-Sari Store
-    address_line VARCHAR(255) NOT NULL,
+    type VARCHAR(50) NOT NULL CHECK (
+        type IN (
+            'Public Wet Market',
+            'Supermarket',
+            'Grocery Store',
+            'Farmers Market',
+            'Barangay Talipapa'
+        )
+    ),
+    barangay VARCHAR(100) NOT NULL,
+    city VARCHAR(100) NOT NULL DEFAULT 'Calbayog City',
+    province VARCHAR(100) DEFAULT 'Samar',
+    address VARCHAR(255) NOT NULL,
+    operating_hours VARCHAR(100) NOT NULL,
+    verified_badge BOOLEAN NOT NULL DEFAULT TRUE,
+    distance_km DECIMAL(4, 1) NOT NULL DEFAULT 0.0,
+    rating DECIMAL(2, 1) NOT NULL DEFAULT 4.5,
+    featured_deals_count INT DEFAULT 0,
+    popular_for TEXT[] DEFAULT '{}',
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
     contact_number VARCHAR(30),
-    is_participating BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-
-    -- Foreign Key Constraints
-    CONSTRAINT fk_stores_location 
-        FOREIGN KEY (location_id) 
-        REFERENCES locations(location_id) 
-        ON DELETE RESTRICT
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ----------------------------------------------------------------------------
--- 7. STORE_COMMODITIES TABLE (Current Price & Availability State)
--- Junction entity connecting Stores and Commodities (Many-to-Many).
--- Holds the live, current price and stock status for high-performance reading.
--- Powers Feature 1: Price Viewing & Feature 3: Price Comparison across stores.
+-- 3. COMMODITIES TABLE
+-- Correlates with: Commodity (src/types/index.ts)
+-- Powers: CatalogView, Search, CompareView, Modal Details
 -- ----------------------------------------------------------------------------
-CREATE TABLE store_commodities (
-    store_commodity_id SERIAL PRIMARY KEY,
-    store_id INT NOT NULL,
-    commodity_id INT NOT NULL,
-    unit_id INT NOT NULL,
-    current_price DECIMAL(10, 2) NOT NULL CHECK (current_price >= 0),
-    stock_status stock_status NOT NULL DEFAULT 'Available',
-    last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_updated_by INT,
-
-    -- Constraints
-    CONSTRAINT uq_store_commodity_unit 
-        UNIQUE (store_id, commodity_id, unit_id),
-
-    CONSTRAINT fk_sc_store 
-        FOREIGN KEY (store_id) 
-        REFERENCES stores(store_id) 
-        ON DELETE CASCADE,
-
-    CONSTRAINT fk_sc_commodity 
-        FOREIGN KEY (commodity_id) 
-        REFERENCES commodities(commodity_id) 
-        ON DELETE CASCADE,
-
-    CONSTRAINT fk_sc_unit 
-        FOREIGN KEY (unit_id) 
-        REFERENCES units_of_measurement(unit_id) 
-        ON DELETE RESTRICT,
-
-    CONSTRAINT fk_sc_last_updated_by 
-        FOREIGN KEY (last_updated_by) 
-        REFERENCES users(user_id) 
-        ON DELETE SET NULL
+CREATE TABLE commodities (
+    id VARCHAR(50) PRIMARY KEY, -- e.g. 'cmd-rice-regular', 'cmd-chicken-whole'
+    name VARCHAR(150) NOT NULL,
+    local_name VARCHAR(150), -- e.g. 'Regular Rice (NFA / Local Harvest)'
+    category_id VARCHAR(50) NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
+    subcategory VARCHAR(100) NOT NULL,
+    unit VARCHAR(30) NOT NULL, -- e.g. 'kg', 'piece', 'liter', 'can', 'tray', 'pack'
+    standard_unit VARCHAR(50) NOT NULL, -- e.g. '1 kg', '1 piece', '1 tray (30 eggs)'
+    image_url TEXT NOT NULL,
+    description TEXT NOT NULL,
+    suggested_retail_price DECIMAL(10, 2), -- DTI / DA Suggested Retail Price (SRP)
+    tags TEXT[] DEFAULT '{}', -- e.g. ['Staple', 'Popular', 'Government Monitored']
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ----------------------------------------------------------------------------
--- 8. PRICE_HISTORY TABLE
--- Immutable log of price updates over time.
--- Directly powers Feature 6: Price History and Trends (charts, daily/weekly deltas).
+-- 4. STORE_PRICES TABLE
+-- Correlates with: StorePrice (src/types/index.ts)
+-- Junction entity between market_locations and commodities.
+-- Powers: Store-by-store comparison table, cheapest store badges, stock status.
+-- ----------------------------------------------------------------------------
+CREATE TABLE store_prices (
+    id BIGSERIAL PRIMARY KEY,
+    commodity_id VARCHAR(50) NOT NULL REFERENCES commodities(id) ON DELETE CASCADE,
+    store_id VARCHAR(50) NOT NULL REFERENCES market_locations(id) ON DELETE CASCADE,
+    price DECIMAL(10, 2) NOT NULL CHECK (price >= 0),
+    previous_price DECIMAL(10, 2),
+    unit VARCHAR(30) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'available' CHECK (
+        status IN ('available', 'out_of_stock', 'low_stock')
+    ),
+    verified_citizen BOOLEAN NOT NULL DEFAULT TRUE,
+    stock_note TEXT,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_commodity_store_unit UNIQUE (commodity_id, store_id, unit)
+);
+
+-- ----------------------------------------------------------------------------
+-- 5. PRICE_HISTORY TABLE
+-- Correlates with: PriceHistoryPoint (src/types/index.ts)
+-- Powers: TrendsView, longitudinal 30-day SVG charts, PriceSparkline
 -- ----------------------------------------------------------------------------
 CREATE TABLE price_history (
-    price_history_id BIGSERIAL PRIMARY KEY,
-    store_commodity_id INT NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    commodity_id VARCHAR(50) NOT NULL REFERENCES commodities(id) ON DELETE CASCADE,
+    store_id VARCHAR(50) REFERENCES market_locations(id) ON DELETE SET NULL,
+    recorded_date DATE NOT NULL,
+    label VARCHAR(50) NOT NULL, -- e.g. 'Day 1', 'Week 2', 'Sep 05'
     price DECIMAL(10, 2) NOT NULL CHECK (price >= 0),
-    stock_status stock_status NOT NULL DEFAULT 'Available',
-    recorded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    recorded_by INT,
-    remarks VARCHAR(255),
+    average_price DECIMAL(10, 2),
+    lowest_price DECIMAL(10, 2),
+    highest_price DECIMAL(10, 2),
+    change_amount DECIMAL(10, 2),
+    change_note TEXT,
+    recorded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
 
-    -- Foreign Key Constraints
-    CONSTRAINT fk_ph_store_commodity 
-        FOREIGN KEY (store_commodity_id) 
-        REFERENCES store_commodities(store_commodity_id) 
-        ON DELETE CASCADE,
-
-    CONSTRAINT fk_ph_recorded_by 
-        FOREIGN KEY (recorded_by) 
-        REFERENCES users(user_id) 
-        ON DELETE SET NULL
+-- ----------------------------------------------------------------------------
+-- 6. CITIZEN_PRICE_REPORTS TABLE
+-- Correlates with: ReportPriceModal.tsx submission form
+-- Allows citizens to crowdsource price observations across Calbayog markets.
+-- ----------------------------------------------------------------------------
+CREATE TABLE citizen_price_reports (
+    id BIGSERIAL PRIMARY KEY,
+    commodity_id VARCHAR(50) NOT NULL REFERENCES commodities(id) ON DELETE CASCADE,
+    market_id VARCHAR(50) NOT NULL REFERENCES market_locations(id) ON DELETE CASCADE,
+    reported_price DECIMAL(10, 2) NOT NULL CHECK (reported_price > 0),
+    unit VARCHAR(30) NOT NULL,
+    notes TEXT,
+    reporter_name VARCHAR(120) DEFAULT 'Citizen Contributor',
+    reporter_email VARCHAR(150),
+    verification_status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (
+        verification_status IN ('pending', 'verified', 'rejected')
+    ),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================================
--- INDEXES FOR QUERY OPTIMIZATION
+-- PERFORMANCE & FILTERING INDEXES
 -- ============================================================================
 
--- Faster location lookups (City / Municipality / Barangay)
-CREATE INDEX idx_locations_municipality_city ON locations(municipality_city);
-CREATE INDEX idx_stores_location_id ON stores(location_id);
+-- Fast category and tag lookups
+CREATE INDEX idx_commodities_category ON commodities(category_id);
+CREATE INDEX idx_commodities_tags ON commodities USING GIN (tags);
 
--- Faster commodity search by category and text search
-CREATE INDEX idx_commodities_category_id ON commodities(category_id);
-CREATE INDEX idx_commodities_name ON commodities(name);
+-- Fast price filtering and comparison
+CREATE INDEX idx_store_prices_commodity ON store_prices(commodity_id, price);
+CREATE INDEX idx_store_prices_store ON store_prices(store_id);
+CREATE INDEX idx_store_prices_status ON store_prices(status);
 
--- Composite indexes for lightning fast price comparison and lowest price sorting
-CREATE INDEX idx_store_commodities_commodity_price ON store_commodities(commodity_id, current_price);
-CREATE INDEX idx_store_commodities_store_id ON store_commodities(store_id);
+-- Fast location search
+CREATE INDEX idx_market_locations_type ON market_locations(type);
+CREATE INDEX idx_market_locations_barangay ON market_locations(barangay);
 
--- Time-series index for Price History trends and charts
-CREATE INDEX idx_price_history_lookup ON price_history(store_commodity_id, recorded_at DESC);
+-- Rapid history lookup for time-series charts
+CREATE INDEX idx_price_history_commodity_date ON price_history(commodity_id, recorded_date ASC);
+
+-- ============================================================================
+-- SQL VIEW: VIEW_COMMODITIES_CATALOG
+-- Pre-calculates aggregated pricing and highlights the cheapest option,
+-- perfectly matching the frontend's Commodity object shape.
+-- ============================================================================
+CREATE OR REPLACE VIEW view_commodities_catalog AS
+WITH price_aggregates AS (
+    SELECT 
+        sp.commodity_id,
+        MIN(CASE WHEN sp.status = 'available' THEN sp.price END) AS cheapest_price,
+        MAX(sp.price) AS highest_price,
+        ROUND(AVG(sp.price)::numeric, 2) AS current_average_price,
+        COUNT(sp.id) AS active_seller_count
+    FROM store_prices sp
+    GROUP BY sp.commodity_id
+),
+cheapest_stores AS (
+    SELECT DISTINCT ON (sp.commodity_id)
+        sp.commodity_id,
+        m.id AS cheapest_store_id,
+        m.name AS cheapest_store_name,
+        CONCAT(m.barangay, ', ', m.city) AS cheapest_store_location
+    FROM store_prices sp
+    JOIN market_locations m ON sp.store_id = m.id
+    WHERE sp.status = 'available'
+    ORDER BY sp.commodity_id, sp.price ASC
+)
+SELECT 
+    c.id,
+    c.name,
+    c.local_name,
+    c.category_id,
+    cat.name AS category_name,
+    c.subcategory,
+    c.unit,
+    c.standard_unit,
+    c.image_url,
+    c.description,
+    c.suggested_retail_price,
+    c.tags,
+    COALESCE(pa.cheapest_price, 0) AS cheapest_price,
+    COALESCE(pa.highest_price, 0) AS highest_price,
+    COALESCE(pa.current_average_price, 0) AS current_average_price,
+    COALESCE(cs.cheapest_store_id, '') AS cheapest_store_id,
+    COALESCE(cs.cheapest_store_name, 'No active store') AS cheapest_store_name,
+    COALESCE(cs.cheapest_store_location, '') AS cheapest_store_location,
+    CASE 
+        WHEN pa.active_seller_count > 0 THEN 'available'
+        ELSE 'out_of_stock'
+    END AS status,
+    c.is_active
+FROM commodities c
+JOIN categories cat ON c.category_id = cat.id
+LEFT JOIN price_aggregates pa ON c.id = pa.commodity_id
+LEFT JOIN cheapest_stores cs ON c.id = cs.commodity_id;
+
+-- ============================================================================
+-- SUPABASE ROW LEVEL SECURITY (RLS) POLICIES
+-- ============================================================================
+
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE market_locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE commodities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE store_prices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE price_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE citizen_price_reports ENABLE ROW LEVEL SECURITY;
+
+-- 1. Public Read Access (Anyone can browse commodities, prices, and locations)
+CREATE POLICY "Public Read Categories" ON categories FOR SELECT USING (true);
+CREATE POLICY "Public Read Market Locations" ON market_locations FOR SELECT USING (true);
+CREATE POLICY "Public Read Commodities" ON commodities FOR SELECT USING (true);
+CREATE POLICY "Public Read Store Prices" ON store_prices FOR SELECT USING (true);
+CREATE POLICY "Public Read Price History" ON price_history FOR SELECT USING (true);
+
+-- 2. Citizen Price Contributions (Anyone can insert a report from ReportPriceModal)
+CREATE POLICY "Citizen Insert Price Reports" ON citizen_price_reports FOR INSERT WITH CHECK (true);
+CREATE POLICY "Citizen Read Own or Verified Reports" ON citizen_price_reports FOR SELECT USING (true);
 
 
 -- ============================================================================
--- SAMPLE DATA POPULATION (Matching README.md Scenarios)
+-- SEED DATA (Matching mockData.ts in dist)
 -- ============================================================================
 
 -- Categories
-INSERT INTO categories (name, slug, description) VALUES
-('Rice and Grains', 'rice-and-grains', 'Milled rice, brown rice, corn, and grain staples'),
-('Meat', 'meat', 'Fresh and chilled pork, beef, and poultry'),
-('Fish and Seafood', 'fish-and-seafood', 'Fresh catch, saltwater and freshwater fish'),
-('Fruits', 'fruits', 'Fresh seasonal and regular fruits'),
-('Vegetables', 'vegetables', 'Leafy greens, root crops, and highland vegetables'),
-('Eggs', 'eggs', 'Chicken eggs, quail eggs, and salted duck eggs'),
-('Cooking Ingredients', 'cooking-ingredients', 'Sugar, salt, cooking oils, vinegar, spices'),
-('Beverages', 'beverages', 'Coffee, tea, and other drinks'),
-('Household Essentials', 'household-essentials', 'Soaps, detergents, and common daily supplies');
+INSERT INTO categories (id, name, tagline, icon, average_price_range, image_url, popular_items, display_order) VALUES
+('rice-grains', 'Rice & Grains', 'Staple grains, local harvest, and imported rice', 'Wheat', '₱42.00 - ₱62.00 / kg', 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80', ARRAY['Regular Milled Rice', 'Well-Milled Rice', 'Premium Dinorado', 'Sinandomeng Rice'], 1),
+('meat-poultry', 'Meat & Poultry', 'Fresh pork cuts, whole dressed chicken, and local beef', 'Drumstick', '₱180.00 - ₱420.00 / kg', 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=600&q=80', ARRAY['Fresh Whole Chicken', 'Pork Liempo', 'Pork Kasim', 'Beef Shank'], 2),
+('fish-seafood', 'Fish & Seafood', 'Fresh catch, coastal harvest, and aquaculture fish', 'Fish', '₱120.00 - ₱360.00 / kg', 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?auto=format&fit=crop&w=600&q=80', ARRAY['Bangus (Milkfish)', 'Tilapia', 'Galunggong', 'Fresh Squid'], 3),
+('eggs-dairy', 'Eggs & Dairy', 'Table eggs by piece or tray, salted eggs, and canned milk', 'Egg', '₱7.50 - ₱260.00', 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?auto=format&fit=crop&w=600&q=80', ARRAY['Brown Eggs (Large)', 'Brown Eggs (Tray)', 'Salted Duck Eggs', 'Evaporated Milk'], 4),
+('vegetables', 'Vegetables', 'Highland and lowland farm vegetables, spices, and greens', 'Carrot', '₱40.00 - ₱180.00 / kg', 'https://images.unsplash.com/photo-1597362925123-77861d3fbac7?auto=format&fit=crop&w=600&q=80', ARRAY['Red Onions', 'Native Garlic', 'Native Tomatoes', 'Ampalaya'], 5),
+('fruits', 'Fresh Fruits', 'Seasonal local fruits and table staples', 'Apple', '₱60.00 - ₱190.00 / kg', 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?auto=format&fit=crop&w=600&q=80', ARRAY['Lakatan Banana', 'Carabao Mango', 'Papaya', 'Calamansi'], 6),
+('cooking-essentials', 'Cooking Essentials', 'Sugar, cooking oils, iodized salt, and sauces', 'Flame', '₱28.00 - ₱140.00 / unit', 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=600&q=80', ARRAY['Refined White Sugar', 'Coconut Cooking Oil', 'Palm Oil (1L)', 'Iodized Salt'], 7),
+('beverages', 'Beverages & Coffee', 'Instant coffee, tablea chocolate, tea, and milk powder', 'Coffee', '₱12.00 - ₱185.00 / pack', 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80', ARRAY['3-in-1 Coffee (10s)', 'Samar Cocoa Tablea', 'Powdered Milk 300g', 'Ground Native Coffee'], 8),
+('canned-household', 'Canned Goods & Essentials', 'Sardines, corned beef, tuna, and daily household supplies', 'Package', '₱22.00 - ₱95.00 / can', 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=600&q=80', ARRAY['Canned Sardines 155g', 'Corned Beef 175g', 'Tuna Flakes 155g', 'Laundry Bar Soap'], 9);
 
--- Units of Measurement
-INSERT INTO units_of_measurement (unit_name, unit_symbol) VALUES
-('Kilogram', 'kg'),
-('Liter', 'L'),
-('Piece', 'pc'),
-('Dozen', 'dz'),
-('Pack', 'pk');
-
--- Users
-INSERT INTO users (full_name, email, role) VALUES
-('System Administrator', 'admin@price-monitor.gov.ph', 'admin'),
-('Maria Santos', 'maria.santos@calbayog.gov.ph', 'market_inspector'),
-('Juan Dela Cruz', 'juan.citizen@email.com', 'citizen');
-
--- Locations (e.g. Calbayog City from README.md)
-INSERT INTO locations (region, province, municipality_city, barangay, zip_code) VALUES
-('Region VIII', 'Samar', 'Calbayog City', 'Central (Poblacion)', '6710'),
-('Region VIII', 'Samar', 'Calbayog City', 'Capoocan', '6710'),
-('Region VIII', 'Samar', 'Calbayog City', 'Obrero', '6710');
-
--- Stores (Market A, Store B, Market C from README.md)
-INSERT INTO stores (location_id, name, store_type, address_line) VALUES
-(1, 'Market A (Public Market Central)', 'Public Market', 'Navarro Street, Central'),
-(2, 'Store B (Capoocan Grocery)', 'Grocery', 'Magsaysay Blvd, Capoocan'),
-(3, 'Market C (Obrero Wet & Dry Market)', 'Public Market', 'Rizal Ave, Obrero');
+-- Market Locations (Calbayog City)
+INSERT INTO market_locations (id, name, type, barangay, city, address, operating_hours, verified_badge, distance_km, rating, featured_deals_count, popular_for) VALUES
+('mkt-calbayog-central', 'Calbayog Central Public Market', 'Public Wet Market', 'Brgy. Central', 'Calbayog City', 'Gomez St. cor. Rosales Blvd, Calbayog City, Samar', '4:00 AM - 7:30 PM (Daily)', true, 0.8, 4.8, 22, ARRAY['Fresh Seafood', 'Local Rice Varieties', 'Native Vegetables']),
+('mkt-rawis-talipapa', 'Rawis Wet & Dry Community Talipapa', 'Barangay Talipapa', 'Brgy. Rawis', 'Calbayog City', 'National Highway, Rawis, Calbayog City', '5:00 AM - 6:00 PM (Daily)', true, 2.3, 4.6, 16, ARRAY['Fresh Fish catch', 'Cooking Ingredients', 'Local Vegetables']),
+('mkt-san-policarpo', 'San Policarpo Supermarket & Mart', 'Supermarket', 'Brgy. San Policarpo', 'Calbayog City', 'Magsaysay Blvd, San Policarpo, Calbayog City', '7:30 AM - 8:30 PM (Daily)', true, 3.5, 4.7, 19, ARRAY['Canned Goods', 'Packaged Rice', 'Household Essentials']),
+('mkt-oquendo-farmers', 'Oquendo District Farmers Market', 'Farmers Market', 'Brgy. Oquendo Poblacion', 'Calbayog City', 'Oquendo Plaza, Calbayog City', '5:00 AM - 3:00 PM (Tue, Thu, Sat)', true, 14.2, 4.9, 25, ARRAY['Direct Farm Vegetables', 'Native Fruits', 'Root Crops']),
+('mkt-hamorawon-mart', 'Hamorawon Citizen Co-op Grocery', 'Grocery Store', 'Brgy. Hamorawon', 'Calbayog City', 'Bugallon St., Hamorawon, Calbayog City', '6:00 AM - 7:00 PM (Daily)', true, 1.4, 4.5, 12, ARRAY['Refined Sugar', 'Cooking Oil', 'Flour & Bakery Essentials']),
+('mkt-matobato-wholesale', 'Matobato Wholesale & Retail Center', 'Supermarket', 'Brgy. Matobato', 'Calbayog City', 'Diversion Road, Matobato, Calbayog City', '7:00 AM - 8:00 PM (Daily)', true, 4.1, 4.7, 28, ARRAY['Sack Rice', 'Bulk Cooking Oil', 'Case Canned Goods']);
 
 -- Commodities
-INSERT INTO commodities (category_id, default_unit_id, name, slug, description, search_keywords) VALUES
-(1, 1, 'Regular Rice', 'regular-rice', 'Well-milled standard regular white rice', 'rice regular kanin bigas staple grain'),
-(2, 1, 'Fresh Whole Chicken', 'fresh-whole-chicken', 'Dressed broiler chicken', 'chicken manok meat poultry dressed'),
-(7, 2, 'Cooking Oil', 'cooking-oil', 'Palm cooking oil', 'cooking oil mantika oil fry'),
-(7, 1, 'Refined White Sugar', 'refined-white-sugar', 'Pure cane refined sugar', 'sugar asukal white refined sweet');
+INSERT INTO commodities (id, name, local_name, category_id, subcategory, unit, standard_unit, image_url, description, suggested_retail_price, tags) VALUES
+('cmd-rice-regular', 'Regular Milled Rice', 'Regular Rice (NFA / Local Harvest)', 'rice-grains', 'Milled Rice', 'kg', '1 kg', 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80', 'Standard everyday household rice. High carbohydrate yield, well-polished, staple grain for Filipino families.', 48.00, ARRAY['Staple', 'Popular', 'Government Monitored', 'Local Grain']),
+('cmd-rice-well-milled', 'Well-Milled Rice', 'Sinandomeng / Special White Rice', 'rice-grains', 'Specialty Rice', 'kg', '1 kg', 'https://images.unsplash.com/photo-1536304993881-ff6e9eefa2a6?auto=format&fit=crop&w=600&q=80', 'Semi-translucent grains with minimal broken fractions. Soft texture when cooked, aroma profile high.', 52.00, ARRAY['Staple', 'Popular', 'Semi-Premium']),
+('cmd-chicken-whole', 'Fresh Whole Chicken', 'Dressed Broiler Chicken', 'meat-poultry', 'Poultry', 'kg', '1 kg', 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=600&q=80', 'Clean dressed whole broiler chicken, chilled or fresh slaughter. High protein staple for home cooking.', 180.00, ARRAY['Fresh Meat', 'Staple', 'Monitored', 'Protein']),
+('cmd-pork-liempo', 'Pork Belly (Liempo)', 'Liempo Slab / Cut', 'meat-poultry', 'Pork Cuts', 'kg', '1 kg', 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=600&q=80', 'Prime layered pork belly with optimal fat-to-meat striations, preferred for sinigang, inihaw, and lechon kawali.', 330.00, ARRAY['Prime Cut', 'Fresh Meat', 'High Demand']),
+('cmd-sugar-white', 'Refined White Sugar', 'Pure Cane Refined Sugar', 'cooking-essentials', 'Sweeteners', 'kg', '1 kg', 'https://images.unsplash.com/photo-1581441363689-1f3c3c414635?auto=format&fit=crop&w=600&q=80', 'Refined granulated pure sugarcane white sugar for baking, beverages, and household cooking.', 85.00, ARRAY['Staple', 'Baking', 'Controlled Item']);
 
--- Store Commodities (Current Prices matching README example: Market A ₱48, Store B ₱50, Market C ₱47)
-INSERT INTO store_commodities (store_id, commodity_id, unit_id, current_price, stock_status, last_updated_by) VALUES
-(1, 1, 1, 48.00, 'Available', 2),
-(2, 1, 1, 50.00, 'Available', 2),
-(3, 1, 1, 47.00, 'Available', 2),
-(1, 2, 1, 180.00, 'Available', 2),
-(2, 2, 1, 185.00, 'Available', 2),
-(1, 3, 2, 65.00, 'Available', 2),
-(1, 4, 1, 85.00, 'Out of Stock', 2);
+-- Store Prices (Cross-store comparison data)
+INSERT INTO store_prices (commodity_id, store_id, price, previous_price, unit, status, verified_citizen, stock_note) VALUES
+('cmd-rice-regular', 'mkt-calbayog-central', 47.00, 45.00, 'kg', 'available', true, 'Full sacks available (Mindanao harvest)'),
+('cmd-rice-regular', 'mkt-rawis-talipapa', 48.00, 47.00, 'kg', 'available', true, NULL),
+('cmd-rice-regular', 'mkt-san-policarpo', 50.00, 48.00, 'kg', 'available', true, 'Repacked 1kg bags (clean label)'),
+('cmd-chicken-whole', 'mkt-calbayog-central', 178.00, 185.00, 'kg', 'available', true, 'Morning dressed fresh delivery'),
+('cmd-chicken-whole', 'mkt-san-policarpo', 188.00, 190.00, 'kg', 'available', true, 'Magnolia / Bounty Fresh vacuum sealed'),
+('cmd-pork-liempo', 'mkt-calbayog-central', 320.00, 310.00, 'kg', 'available', true, 'Local Samar hog raiser cut'),
+('cmd-pork-liempo', 'mkt-san-policarpo', 345.00, 340.00, 'kg', 'available', true, 'Air-flown chilled cut'),
+('cmd-sugar-white', 'mkt-calbayog-central', 82.00, 85.00, 'kg', 'available', true, 'Repacked per kilo'),
+('cmd-sugar-white', 'mkt-hamorawon-mart', 86.00, 88.00, 'kg', 'available', true, 'Co-op member price available');
 
--- Price History for Regular Rice at Market A (Matching README: ₱45 -> ₱47 -> ₱48)
-INSERT INTO price_history (store_commodity_id, price, stock_status, recorded_at, recorded_by, remarks) VALUES
-(1, 45.00, 'Available', CURRENT_TIMESTAMP - INTERVAL '30 days', 2, 'Initial monthly baseline'),
-(1, 47.00, 'Available', CURRENT_TIMESTAMP - INTERVAL '14 days', 2, 'Fuel price adjustment reported'),
-(1, 48.00, 'Available', CURRENT_TIMESTAMP - INTERVAL '2 days', 2, 'Current market price update');
-
+-- 30-Day Longitudinal Price History for Regular Milled Rice
+INSERT INTO price_history (commodity_id, store_id, recorded_date, label, price, average_price, lowest_price, highest_price, change_amount, change_note) VALUES
+('cmd-rice-regular', 'mkt-calbayog-central', '2026-09-08', 'Day 1', 45.00, 46.20, 44.50, 48.00, 0.00, 'Baseline post-harvest month'),
+('cmd-rice-regular', 'mkt-calbayog-central', '2026-09-15', 'Day 7', 45.50, 46.80, 45.00, 48.50, 0.50, 'Transportation fuel surcharge adjustment'),
+('cmd-rice-regular', 'mkt-calbayog-central', '2026-09-22', 'Day 14', 46.50, 47.40, 45.50, 49.00, 1.00, 'Inter-island ferry freight rate increase'),
+('cmd-rice-regular', 'mkt-calbayog-central', '2026-09-29', 'Day 21', 47.00, 48.10, 46.00, 50.00, 0.50, 'Wholesale sack price rose by ₱50'),
+('cmd-rice-regular', 'mkt-calbayog-central', '2026-10-06', 'Day 30', 47.00, 48.33, 47.00, 50.00, 0.00, 'Stabilized price across Central & Rawis');

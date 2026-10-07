@@ -1,14 +1,19 @@
 import React from 'react';
 import { PillButton } from '../common/PillButton';
-import { ArrowLeftRight, TrendingUp, CheckCircle2, Store } from 'lucide-react';
+import { ArrowLeftRight, TrendingUp, CheckCircle2, Store, Database } from 'lucide-react';
 import { NavigationTab } from '../../types';
 
 interface HeroBannerProps {
   onNavigate: (tab: NavigationTab) => void;
   onOpenReportModal: () => void;
+  onOpenDatabaseModal: () => void;
 }
 
-export const HeroBanner: React.FC<HeroBannerProps> = ({ onNavigate, onOpenReportModal }) => {
+export const HeroBanner: React.FC<HeroBannerProps> = ({ 
+  onNavigate, 
+  onOpenReportModal,
+  onOpenDatabaseModal 
+}) => {
   return (
     <section className="bg-canvas-night text-on-primary border-b border-hairline-dark relative overflow-hidden">
       
@@ -69,6 +74,16 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ onNavigate, onOpenReport
                 className="hidden sm:inline-flex"
               >
                 Submit Price Update
+              </PillButton>
+
+              <PillButton
+                variant="outline-dark"
+                size="md"
+                onClick={onOpenDatabaseModal}
+                icon={<Database className="w-4 h-4 text-aloe-10" />}
+                className="bg-canvas-night-elevated border-white/20"
+              >
+                Database & Supabase Hub
               </PillButton>
             </div>
           </div>

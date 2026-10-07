@@ -11,13 +11,16 @@ import {
   PlusCircle, 
   Layers,
   Sparkles,
-  ChevronDown
+  ChevronDown,
+  Database
 } from 'lucide-react';
 
 interface NavbarProps {
   activeTab: NavigationTab;
   onTabChange: (tab: NavigationTab) => void;
   onOpenReportModal: () => void;
+  onOpenDatabaseModal: () => void;
+  isUsingLiveData: boolean;
   selectedLocation: string;
   onLocationChange: (loc: string) => void;
   searchQuery: string;
@@ -29,6 +32,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   onTabChange,
   onOpenReportModal,
+  onOpenDatabaseModal,
+  isUsingLiveData,
   selectedLocation,
   onLocationChange,
   searchQuery,
@@ -103,6 +108,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <ChevronDown className="w-3 h-3 text-link-cool-2" />
               </div>
             </div>
+
+            {/* Database & Supabase Manager Trigger */}
+            <button
+              onClick={onOpenDatabaseModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-pill bg-canvas-night-elevated hover:bg-shade-70 border border-hairline-dark text-on-primary transition-colors cursor-pointer"
+              title="Open Supabase Database Integration Hub"
+            >
+              <Database className="w-3.5 h-3.5 text-aloe-10" />
+              <span className="hidden md:inline font-medium">Database</span>
+              <span className={`w-2 h-2 rounded-full ${isUsingLiveData ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            </button>
 
             {/* Report Price Modal Trigger */}
             <PillButton
