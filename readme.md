@@ -2,7 +2,7 @@
 
 ## System Overview
 
-The **Commodity Price Monitoring System** is a citizen-oriented platform that provides updated prices of common commodities from local markets, stores, and other participating sellers. It allows residents to compare prices, monitor price changes, and make informed purchasing decisions.
+The SUKI (Smart Utility & Kalakal Information) is a citizen-oriented platform that provides updated prices of common commodities from local markets, stores, and other participating sellers. It allows residents to compare prices, monitor price changes, and make informed purchasing decisions.
 
 ---
 
