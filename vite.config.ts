@@ -3,5 +3,5 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  publicDir: 'src/assets',
+  base: '/ai-vibe-coding/',
 });
